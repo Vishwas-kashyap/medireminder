@@ -784,16 +784,39 @@
         // ━━━ Silently unlock audio on FIRST tap anywhere (login tap counts!) ━━━
         let _audioUnlocked = false;
         let _silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-        document.addEventListener('click', function _unlockOnce() {
+        
+        function unlockAudio() {
             if (_audioUnlocked) return;
             _audioUnlocked = true;
             _silentAudio.play().catch(() => {});
-            // Also resume any suspended AudioContext
             try {
                 const AC = window.AudioContext || window.webkitAudioContext;
                 if (AC) { const ctx = new AC(); ctx.resume(); ctx.close(); }
             } catch(e) {}
-        }, false);
+            console.log('[Audio] Unlocked');
+        }
+
+        document.addEventListener('click', unlockAudio, { once: true });
+        document.addEventListener('touchstart', unlockAudio, { once: true });
+
+        // Check if we were opened via a background notification
+        function checkUrlForAlarms() {
+            const params = new URLSearchParams(window.location.search);
+            const medName = params.get('alarm');
+            if (medName) {
+                console.log('[App] Triggering alarm sound for:', medName);
+                unlockAudio(); // Try to unlock if not already
+                setTimeout(() => {
+                    spawnToast(`🚨 ALARM: ${medName}`, '⏰');
+                    playChime();
+                    // Clear search params without reloading
+                    window.history.replaceState({}, document.title, "/");
+                }, 500);
+            }
+        }
+        
+        // Run on load
+        window.addEventListener('load', checkUrlForAlarms);
 
         function unlockAndPlay() { /* legacy stub — kept for safety */ }
 

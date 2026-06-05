@@ -125,18 +125,44 @@ async function checkAndFireAlarms() {
 
 // ─── Show Notification ───────────────────────────────────────
 function showMedNotification(medName, alarmId) {
-    return self.registration.showNotification('💊 MediReminder — Dose Due!', {
-        body:             `Time to take: ${medName}. Tap to open.`,
-        icon:             '/favicon.svg',
-        badge:            '/favicon.svg',
-        vibrate:          [500, 200, 500, 200, 1000, 200, 500],
+    return self.registration.showNotification('🚨 MediReminder: TIME FOR MEDICINE', {
+        body: `URGENT: Take ${medName} now to maintain your streak!`,
+        icon: '/icon-512.png',
+        badge: '/icon-192.png',
+        // Aggressive vibration: [Wait, Vibrate, Wait, Vibrate...]
+        vibrate: [0, 500, 200, 500, 200, 500, 1000, 500, 200, 500, 200, 500],
         requireInteraction: true,
-        silent:           false,
-        tag:              'med-alarm-' + alarmId,
-        renotify:         true,
-        data:             { alarmId, medName }
+        tag: 'urgent-alarm-' + alarmId,
+        renotify: true,
+        data: { medName, alarmId }
     });
 }
+
+// ─── Notification Click → Focus/Open App + Start Alarm Sound ───
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    
+    // We append ?alarm=... to the URL. The index.html will see this
+    // and immediately start the looping chime.
+    const medName = event.notification.data ? event.notification.data.medName : 'Medicine';
+    const alarmUrl = '/?alarm=' + encodeURIComponent(medName);
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(clientList => {
+                // If a tab is already open, navigate it to the alarm URL and focus
+                for (const client of clientList) {
+                    if (client.url.includes(location.host) && 'focus' in client) {
+                        return client.navigate(alarmUrl).then(c => c.focus());
+                    }
+                }
+                // If no tab is open, open a new one with the alarm flag
+                if (self.clients.openWindow) {
+                    return self.clients.openWindow(alarmUrl);
+                }
+            })
+    );
+});
 
 // ─── Message Handler (from page) ────────────────────────────
 self.addEventListener('message', event => {
