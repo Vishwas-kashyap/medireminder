@@ -727,6 +727,7 @@
 
             setupNavigation(role);
             processRenderCycle();
+            startHeartbeat(); // Start the background media session
 
             // Register alarms with SW immediately after login (with short delay for DB load)
             if (role === 'patient') {
@@ -845,14 +846,36 @@
             } catch(e) { console.log('Beep fallback failed:', e); }
         }
 
+        // ━━━ ALARM HEARTBEAT (The secret to background sound) ━━━
+        let _heartbeatAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        _heartbeatAudio.loop = true;
+
+        function startHeartbeat() {
+            console.log('[Heartbeat] Starting silent media session...');
+            _heartbeatAudio.play().then(() => {
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: 'MediReminder Active Protection',
+                        artist: 'Intelligent Health System',
+                        album: 'Safety Heartbeat',
+                        artwork: [{ src: '/icon-512.png', sizes: '512x512', type: 'image/png' }]
+                    });
+                    // Keep the channel open
+                    navigator.mediaSession.setActionHandler('play', () => _heartbeatAudio.play());
+                    navigator.mediaSession.setActionHandler('pause', () => _heartbeatAudio.pause());
+                }
+            }).catch(e => console.log('[Heartbeat] Blocked until interaction:', e));
+        }
+
         function triggerAlarm(med) {
             const key = 'med_' + med.id;
             if(triggeredAlarms[key]) return;
             triggeredAlarms[key] = true;
+            
             spawnToast(`🔔 Time for ${med.name}!`, '⏰');
             openTakeMed(med.id, med.name);
 
-            // ━━ Foreground: play audio
+            // ━━ Play audio via our active heartbeat channel
             playChime();
 
             // ━━ Background: send notification via Service Worker (works when tab is minimized)
