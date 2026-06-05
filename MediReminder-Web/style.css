@@ -149,6 +149,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
 .form-group label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.5rem; }
 .form-control { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.85rem 1.25rem; color: #fff; font-family: inherit; font-size: 0.95rem; transition: all 0.3s; outline: none; }
 .form-control:focus { background: rgba(255,255,255,0.06); border-color: var(--accent, var(--green)); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+select.form-control option { background-color: #0f172a; color: #fff; }
 .modal-actions { display: flex; gap: 1rem; margin-top: 2rem; }
 .modal-actions .btn { flex: 1; }
 

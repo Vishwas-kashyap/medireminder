@@ -197,9 +197,10 @@
             </div>
             <div class="form-group">
                 <label>Target Patient</label>
-                <select class="form-control" id="form-pr-pat">
+                <input type="text" class="form-control" id="form-pr-pat" list="patient-options" placeholder="Select or type new patient name" required>
+                <datalist id="patient-options">
                     <!-- Dynamically populated -->
-                </select>
+                </datalist>
             </div>
             <div class="form-group">
                 <label>Schedule Target</label>
@@ -442,9 +443,9 @@
                 `).join('');
             }
             // Update doctor prescribe dropdown
-            const prPat = g('form-pr-pat');
-            if(prPat) {
-                prPat.innerHTML = STATE.linked.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            const prPatOptions = g('patient-options');
+            if(prPatOptions) {
+                prPatOptions.innerHTML = STATE.linked.map(p => `<option value="${p.name}"></option>`).join('');
             }
         }
 
@@ -458,29 +459,42 @@
         // ════════════════ ACTIONS ════════════════
         function submitPrescription() {
             const name = g('form-pr-name').value;
+            const patName = g('form-pr-pat').value.trim();
             const timeRaw = g('form-pr-time').value;
-            if(!name || !timeRaw) return spawnToast('Parameters missing!', '⚠️');
+            if(!name || !timeRaw || !patName) return spawnToast('Parameters missing!', '⚠️');
             
+            // Auto register patient if new
+            const exists = STATE.linked.find(p => p.name.toLowerCase() === patName.toLowerCase());
+            if(!exists) {
+                STATE.linked.push({ name: patName, rel: 'Patient', compliance: 100 });
+            }
+
             STATE.medications.unshift({
-                id: Date.now(), name, pat: g('form-pr-pat').value,
+                id: Date.now(), name, pat: patName,
                 time: formatTime(timeRaw), status: 'PENDING', ico: '💊', dose: g('form-pr-dose').value || 'As directed'
             });
-            g('form-pr-name').value = ''; g('form-pr-time').value = '';
+            g('form-pr-name').value = ''; g('form-pr-time').value = ''; g('form-pr-pat').value = '';
             closeModal('modal-prescribe');
             processRenderCycle();
             spawnToast('Prescription encoded into network.', '📝');
         }
 
         function submitAlarm() {
-            const pat = g('form-al-pat').value;
+            const pat = g('form-al-pat').value.trim();
             const timeRaw = g('form-al-time').value;
             if(!pat || !timeRaw) return spawnToast('Name and Time required.', '⚠️');
+
+            // Auto register patient if new
+            const exists = STATE.linked.find(p => p.name.toLowerCase() === pat.toLowerCase());
+            if(!exists) {
+                STATE.linked.push({ name: pat, rel: 'Patient', compliance: 100 });
+            }
 
             STATE.alarms.push({
                 id: Date.now(), pat, time: formatTime(timeRaw),
                 med: g('form-al-med').value || 'General Alarm', type: g('form-al-type').value
             });
-            g('form-al-pat').value = ''; g('form-al-time').value = '';
+            g('form-al-pat').value = ''; g('form-al-time').value = ''; g('form-al-med').value = '';
             closeModal('modal-alarm');
             processRenderCycle();
             spawnToast('Guardian Alarm Armed.', '🛡️');
