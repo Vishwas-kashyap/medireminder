@@ -343,6 +343,25 @@
                 .catch(err => console.log('SW registration failed:', err));
         }
 
+        // Send pending patient alarms to SW so it can fire independently in background
+        function registerAlarmsWithSW(patientName) {
+            if (!patientName || !('serviceWorker' in navigator)) return;
+            const pendingMeds = STATE.medications.filter(m => m.pat === patientName && m.status === 'PENDING');
+            const alarmPayload = pendingMeds.map(m => ({ id: m.id, medName: m.name, time: m.time }));
+
+            navigator.serviceWorker.ready.then(reg => {
+                const target = reg.active;
+                if (target) target.postMessage({ type: 'REGISTER_ALARMS', alarms: alarmPayload });
+            });
+        }
+
+        // Re-register alarms whenever page goes to background
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && CURRENT_USER) {
+                registerAlarmsWithSW(CURRENT_USER);
+            }
+        });
+
         // ════════════════ STATE MANAGERS ════════════════
         let STREAK_COUNT = 16;
         let CURRENT_USER = 'Priya Mehta';
@@ -654,6 +673,11 @@
 
             setupNavigation(role);
             processRenderCycle();
+
+            // Register alarms with SW immediately after login
+            if (role === 'patient') {
+                setTimeout(() => registerAlarmsWithSW(CURRENT_USER), 1000);
+            }
         }
 
         function submitNewPatient() {
