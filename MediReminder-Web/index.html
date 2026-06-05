@@ -797,11 +797,31 @@
             console.log('[Audio] Unlocked');
         }
 
-        document.addEventListener('click', unlockAudio, { once: true });
-        document.addEventListener('touchstart', unlockAudio, { once: true });
+        // ── Wake Lock: Prevent Deep Sleep ──
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('[App] Wake Lock Active');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('[App] Wake Lock Released');
+                    });
+                } catch (err) {
+                    console.log('[App] Wake Lock Failed:', err);
+                }
+            }
+        }
+        // Re-request if app becomes visible again
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
 
         // Check if we were opened via a background notification
         function checkUrlForAlarms() {
+            requestWakeLock(); // Request as soon as app opens
             const params = new URLSearchParams(window.location.search);
             const medName = params.get('alarm');
             if (medName) {
