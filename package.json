@@ -1,0 +1,7 @@
+{
+  "name": "medireminder-root",
+  "private": true,
+  "scripts": {
+    "build": "cd MediReminder-Web && npm install && npm run build"
+  }
+}
