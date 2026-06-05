@@ -946,20 +946,39 @@
             });
         }
 
+        // ── Resurrection Loop Controller ──
+        let _resurrectionInterval = null;
+
         function stopChime() {
             if (activeAudio) { activeAudio.pause(); activeAudio = null; }
             if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
             if (_beepInterval) { clearInterval(_beepInterval); _beepInterval = null; }
+            if (_resurrectionInterval) { clearInterval(_resurrectionInterval); _resurrectionInterval = null; }
         }
 
         function playChime() {
             stopChime();
             activeAudio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
             activeAudio.loop = true;
-            activeAudio.play().catch(() => {
-                // Network audio blocked — use synthesized beep instead
-                playBeepFallback();
-            });
+            activeAudio.volume = 1.0;
+
+            const startPlaying = () => {
+                activeAudio.play().catch(e => {
+                    console.log('[Audio] Play blocked, retrying...');
+                    playBeepFallback();
+                });
+            };
+
+            startPlaying();
+
+            // Check every 200ms if the system paused our audio and force it back on
+            _resurrectionInterval = setInterval(() => {
+                if (activeAudio && activeAudio.paused) {
+                    console.log('[Audio] Resurrection triggered!');
+                    startPlaying();
+                }
+            }, 200);
+
             alarmTimeout = setTimeout(() => stopChime(), 60000);
         }
 
