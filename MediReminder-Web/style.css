@@ -188,3 +188,98 @@ select.form-control option { background-color: #0f172a; color: #fff; }
 .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: var(--text-muted); transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 input:checked + .toggle-slider { background-color: var(--green); border-color: var(--green); }
 input:checked + .toggle-slider:before { transform: translateX(20px); background-color: #fff; }
+
+/* ════════════════ ANDROID NATIVE UI TRICKS ════════════════ */
+
+/* Hide Bottom Nav by default */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(5, 8, 16, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    width: 25%;
+}
+
+.nav-item.active {
+    color: var(--blue);
+}
+
+.nav-item-icon {
+    font-size: 1.5rem;
+}
+
+/* 📱 STANDALONE (APP) MODE OVERRIDES */
+@media (display-mode: standalone), (max-width: 768px) {
+    .navbar {
+        padding: 1rem 1.5rem;
+    }
+    .main-wrapper {
+        padding: 1.5rem 1rem;
+    }
+    .nav-tabs {
+        display: none; /* Hide top tabs on mobile, use bottom nav if standalone */
+    }
+}
+
+@media (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: 70px; /* Spacer for bottom nav */
+    }
+
+    .navbar {
+        display: none; /* Hide the top navbar in App mode */
+    }
+
+    .mobile-bottom-nav {
+        display: flex;
+    }
+
+    .main-wrapper {
+        padding-top: 2rem;
+    }
+
+    /* Make cards feel more like native app tiles */
+    .card {
+        border-radius: 20px;
+        margin-bottom: 15px;
+        padding: 1.5rem;
+    }
+}
+
+/* Guardian Action Strip */
+.action-strip {
+    display: flex;
+    gap: 12px;
+    margin-top: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+.quick-action-btn {
+    flex: 1;
+    min-width: 140px;
+    font-size: 0.85rem;
+}
+
