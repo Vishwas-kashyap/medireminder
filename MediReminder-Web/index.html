@@ -129,16 +129,16 @@
                 </div>
             </section>
             
-            <!-- 🛡️ GUARDIAN VIEW -->
+            <!-- 🛡️ GUARDIAN VIEW (Simplified) -->
             <section id="view-guardian" class="hidden">
                 <div class="guardian-hero fade-up">
                     <div class="guardian-hero-icon">🛡️</div>
                     <div class="guardian-hero-content">
-                        <h1>Family Care Portal</h1>
-                        <p>Remotely manage your loved ones' medication regimen. Seamlessly monitor timelines, establish custom multi-channel alerts, and guarantee health adherence.</p>
-                        <div style="display:flex; gap:1rem;">
-                            <button class="btn btn-purple" onclick="showModal('modal-alarm')">+ Set New Safety Alarm</button>
-                            <button class="btn btn-outline" onclick="showModal('modal-link')">Link Another Patient</button>
+                        <h1>Guardian Portal</h1>
+                        <p>Receive notifications when patient alarms ring and remotely manage their schedules.</p>
+                        <div class="action-strip">
+                            <button class="btn btn-purple quick-action-btn" onclick="showModal('modal-prescribe')">+ New Med Schedule</button>
+                            <button class="btn btn-outline quick-action-btn" onclick="showModal('modal-link-guardian')">Link Patient</button>
                         </div>
                     </div>
                 </div>
@@ -146,14 +146,15 @@
                 <div class="grid-cols-2">
                     <div class="card fade-up stgr-1">
                         <div class="card-header">
-                            <h2>Safety Alarms</h2>
+                            <h2>Live Status Monitoring</h2>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Real-time alerts will appear here when patientsmiss a dose.</p>
                         </div>
                         <div id="grd-alarmlist"></div>
                     </div>
                     
                     <div class="card fade-up stgr-2">
                         <div class="card-header">
-                            <h2>Linked Network Profiles</h2>
+                            <h2>Managed Timelines</h2>
                         </div>
                         <div id="grd-patients"></div>
                     </div>
@@ -192,6 +193,10 @@
                 </div>
             </section>
             
+        </div>
+        <!-- 📱 NATIVE BOTTOM NAVIGATION (Android Mode) -->
+        <div class="mobile-bottom-nav" id="bottom-nav">
+            <!-- Dynamically Populated -->
         </div>
     </main>
 
@@ -674,6 +679,9 @@
         function setupNavigation(role) {
             const profile = PROFILES[role];
             const tabsContainer = g('nav-tabs');
+            const bottomNav = g('bottom-nav');
+
+            // Top Tabs (Chrome Desktop)
             tabsContainer.innerHTML = profile.tabs.map((tab, idx) => `
                 <li>
                     <button class="${idx === 0 ? 'active' : ''}" style="--accent: var(--${profile.theme})" onclick="switchView('${tab.id}', this)">
@@ -682,17 +690,32 @@
                 </li>
             `).join('');
 
+            // Bottom Nav (Android App)
+            const icons = { 'view-doctor': '🩺', 'view-patient': '💊', 'view-guardian': '🛡️', 'view-settings': '⚙️' };
+            bottomNav.innerHTML = profile.tabs.map((tab, idx) => `
+                <button class="nav-item ${idx === 0 ? 'active' : ''}" onclick="switchView('${tab.id}', this)">
+                    <span class="nav-item-icon">${icons[tab.id] || '✨'}</span>
+                    <span>${tab.label}</span>
+                </button>
+            `).join('');
+
             // Hide all views, display the first one
             document.querySelectorAll('.main-wrapper > section').forEach(sec => sec.classList.add('hidden'));
             g(profile.tabs[0].id).classList.remove('hidden');
         }
 
         function switchView(viewId, btnNode) {
+            // Hide all sections
             document.querySelectorAll('.main-wrapper > section').forEach(sec => sec.classList.add('hidden'));
             g(viewId).classList.remove('hidden');
             
-            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-            btnNode.classList.add('active');
+            // Sync all Nav Buttons (Top and Bottom)
+            document.querySelectorAll('.nav-tabs button, .mobile-bottom-nav button').forEach(b => b.classList.remove('active'));
+            
+            // Highlight buttons that point to this viewId
+            document.querySelectorAll(`[onclick*="${viewId}"]`).forEach(b => b.classList.add('active'));
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function login(role, userName = null) {
