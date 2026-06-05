@@ -721,6 +721,9 @@
         function login(role, userName = null) {
             triggeredAlarms = {}; // Reset so new device catches missed alarms
 
+            // Save session to localStorage for persistence
+            localStorage.setItem('medireminder_session', JSON.stringify({ role, userName }));
+
             // Request notification permission — MUST happen in user gesture context
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission().then(perm => {
@@ -794,10 +797,29 @@
         }
 
         function logout() {
+            localStorage.removeItem('medireminder_session'); // Clear saved session
             g('app-view').classList.add('hidden');
             g('login-view').classList.remove('hidden');
             document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
         }
+
+        // ── Session Resurrection (Auto-Login on Page Load) ──
+        function checkPersistentSession() {
+            const session = localStorage.getItem('medireminder_session');
+            if (session) {
+                try {
+                    const { role, userName } = JSON.parse(session);
+                    console.log('[Auth] Resurrecting session for:', role);
+                    // Minimal delay to ensure Firebase/State is ready
+                    setTimeout(() => login(role, userName), 100);
+                } catch (e) {
+                    localStorage.removeItem('medireminder_session');
+                }
+            }
+        }
+        
+        // Run on load
+        window.addEventListener('load', checkPersistentSession);
 
         // ════════════════ ALARM / CRON SYSTEM ════════════════
         let triggeredAlarms = {};
