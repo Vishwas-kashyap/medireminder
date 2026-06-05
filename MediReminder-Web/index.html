@@ -317,23 +317,6 @@
     <!-- Toasts Manager -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Sound Unlock Overlay (for mobile browsers) -->
-    <div id="sound-unlock-overlay" style="
-        display: none;
-        position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
-        z-index: 99999; align-items: center; justify-content: center; flex-direction: column;
-        gap: 1.5rem; text-align: center; padding: 2rem;
-    ">
-        <div style="font-size: 4rem;">🔔</div>
-        <h2 style="font-family: Outfit, sans-serif; color: #fff; font-size: 1.75rem;">Medication Alarm!</h2>
-        <p style="color: #94a3b8; font-size: 1.05rem;" id="sound-unlock-label">You have a pending dose. Tap below to hear the alarm.</p>
-        <button onclick="unlockAndPlay()" style="
-            background: #10b981; color: #000; border: none; padding: 1rem 2.5rem;
-            border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer;
-            box-shadow: 0 4px 20px rgba(16,185,129,0.5);
-        ">🔊 Tap to Enable Alarm Sound</button>
-    </div>
-
 
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -707,35 +690,55 @@
         let alarmTimeout = null;
         let pendingAlarmMedId = null;
 
-        function unlockAndPlay() {
-            g('sound-unlock-overlay').style.display = 'none';
-            playChime();
-            if(pendingAlarmMedId) {
-                const med = STATE.medications.find(m => m.id === pendingAlarmMedId);
-                if(med) openTakeMed(med.id, med.name);
-            }
+        // ━━━ Silently unlock audio on FIRST tap anywhere (login tap counts!) ━━━
+        let _audioUnlocked = false;
+        let _silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        document.addEventListener('click', function _unlockOnce() {
+            if (_audioUnlocked) return;
+            _audioUnlocked = true;
+            _silentAudio.play().catch(() => {});
+            // Also resume any suspended AudioContext
+            try {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (AC) { const ctx = new AC(); ctx.resume(); ctx.close(); }
+            } catch(e) {}
+        }, false);
+
+        function unlockAndPlay() { /* legacy stub — kept for safety */ }
+
+        // Web Audio API beep — works even if network audio fails
+        let _beepInterval = null;
+        function playBeepFallback() {
+            try {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AC();
+                ctx.resume();
+                function beep() {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.6, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+                    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.6);
+                }
+                beep();
+                _beepInterval = setInterval(beep, 1500);
+                alarmTimeout = setTimeout(() => {
+                    clearInterval(_beepInterval); ctx.close();
+                }, 60000);
+            } catch(e) { console.log('Beep fallback failed:', e); }
         }
 
         function triggerAlarm(med) {
             const key = 'med_' + med.id;
             if(triggeredAlarms[key]) return;
             triggeredAlarms[key] = true;
-
             spawnToast(`🔔 Time for ${med.name}!`, '⏰');
-
-            // Try to play audio directly (works if user already interacted)
-            const testPlay = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
-            testPlay.play().then(() => {
-                testPlay.pause();
-                // Audio allowed — play real chime and open modal
-                playChime();
-                openTakeMed(med.id, med.name);
-            }).catch(() => {
-                // Audio blocked (mobile) — show unlock overlay
-                pendingAlarmMedId = med.id;
-                g('sound-unlock-label').textContent = `Time to take: ${med.name}. Tap to hear the alarm.`;
-                g('sound-unlock-overlay').style.display = 'flex';
-            });
+            openTakeMed(med.id, med.name);
+            // Try network audio first, fall back to synthesized beep
+            playChime();
         }
 
         function checkOverdueAlarms() {
@@ -770,21 +773,19 @@
         }
 
         function stopChime() {
-            if (activeAudio) {
-                activeAudio.pause();
-                activeAudio = null;
-            }
-            if (alarmTimeout) {
-                clearTimeout(alarmTimeout);
-                alarmTimeout = null;
-            }
+            if (activeAudio) { activeAudio.pause(); activeAudio = null; }
+            if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
+            if (_beepInterval) { clearInterval(_beepInterval); _beepInterval = null; }
         }
 
         function playChime() {
             stopChime();
             activeAudio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
             activeAudio.loop = true;
-            activeAudio.play().catch(e => console.log('Audio blocked:', e));
+            activeAudio.play().catch(() => {
+                // Network audio blocked — use synthesized beep instead
+                playBeepFallback();
+            });
             alarmTimeout = setTimeout(() => stopChime(), 60000);
         }
 
