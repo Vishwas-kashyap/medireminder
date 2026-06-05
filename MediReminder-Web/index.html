@@ -336,6 +336,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // ════════════════ SERVICE WORKER (Background Alarms) ════════════════
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('MediReminder SW ready:', reg.scope))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+
         // ════════════════ STATE MANAGERS ════════════════
         let STREAK_COUNT = 16;
         let CURRENT_USER = 'Priya Mehta';
@@ -621,6 +628,12 @@
 
         function login(role, userName = null) {
             triggeredAlarms = {}; // Reset so new device catches missed alarms
+
+            // Request notification permission silently on login
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
             if(role === 'patient' && userName) {
                 CURRENT_USER = userName;
                 PROFILES.patient.name = userName;
@@ -737,8 +750,25 @@
             triggeredAlarms[key] = true;
             spawnToast(`🔔 Time for ${med.name}!`, '⏰');
             openTakeMed(med.id, med.name);
-            // Try network audio first, fall back to synthesized beep
+
+            // ━━ Foreground: play audio
             playChime();
+
+            // ━━ Background: send notification via Service Worker (works when tab is minimized)
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_ALARM',
+                    medName: med.name
+                });
+            } else if ('serviceWorker' in navigator) {
+                // SW not yet controlling — use reg directly
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.active.postMessage({
+                        type: 'SHOW_ALARM',
+                        medName: med.name
+                    });
+                });
+            }
         }
 
         function checkOverdueAlarms() {
