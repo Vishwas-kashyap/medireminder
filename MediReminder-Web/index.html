@@ -127,6 +127,13 @@
                     </div>
                     <div id="pat-medlist"></div>
                 </div>
+
+                <!-- 🚨 SOS EMERGENCY BUTTON -->
+                <button class="sos-btn fade-up stgr-3" onclick="triggerSOS()">
+                    <span class="sos-icon">🚨</span>
+                    <span class="sos-text">SOS EMERGENCY</span>
+                    <p>Alerts Doctor & Guardian Instantly</p>
+                </button>
             </section>
             
             <!-- 🛡️ GUARDIAN VIEW (Simplified) -->
@@ -161,35 +168,78 @@
                 </div>
             </section>
 
-            <!-- ⚙️ SETTINGS VIEW -->
+            <!-- ⚙️ SETTINGS VIEW (Revamped) -->
             <section id="view-settings" class="hidden">
                 <div class="page-header fade-up">
-                    <h1>Preferences & Integrity</h1>
-                    <p>Customize notifications and secure account parameters.</p>
+                    <h1>Settings & Controls</h1>
+                    <p>Manage your account, reminders, and care network.</p>
                 </div>
                 
-                <div class="card fade-up stgr-1" style="max-width: 600px;">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <h4>Real-Time Push Notifications</h4>
-                            <p>Immediate on-device alerts when a dose is due.</p>
+                <div class="settings-grid fade-up stgr-1">
+                    <!-- 👤 Account Settings -->
+                    <div class="card settings-section">
+                        <h3>👤 Account Settings</h3>
+                        <div class="setting-row clickable" onclick="spawnToast('Feature coming in next update!', '⚙️')">
+                            <div class="setting-info"><h4>Change Username</h4><p>Update your display name</p></div>
+                            <span>›</span>
                         </div>
-                        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <h4>SMS Guardian Fail-Safe Protocols</h4>
-                            <p>Send text message alerts if a critical dose is missed.</p>
+                        <div class="setting-row clickable" onclick="spawnToast('Feature coming in next update!', '⚙️')">
+                            <div class="setting-info"><h4>Change Password</h4><p>Update access credentials</p></div>
+                            <span>›</span>
                         </div>
-                        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <h4>Acoustic Chime Enablers</h4>
-                            <p>Play system audio whenever modal prompts engage.</p>
+                        <div class="setting-row clickable" onclick="spawnToast('Feature coming in next update!', '⚙️')">
+                            <div class="setting-info"><h4>Update Contact Info</h4><p>Phone & Email</p></div>
+                            <span>›</span>
                         </div>
-                        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                        <div class="setting-row clickable" style="color: var(--red);" onclick="logout()">
+                            <div class="setting-info"><h4>Logout</h4><p>Sign out of this session</p></div>
+                            <span>↪️</span>
+                        </div>
                     </div>
+
+                    <!-- 🔔 Reminder Settings -->
+                    <div class="card settings-section">
+                        <h3>🔔 Reminder Settings</h3>
+                        <div class="setting-row">
+                            <div class="setting-info"><h4>Reminder Sound</h4><p>Enable primary alarm chime</p></div>
+                            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                            <div class="setting-info"><h4>Reminder Volume</h4></div>
+                            <input type="range" class="form-control" style="padding:0; height:5px; accent-color: var(--blue);">
+                        </div>
+                    </div>
+
+                    <!-- 🛡️ Doctor/Guardian Settings -->
+                    <div class="card settings-section">
+                        <h3>🛡️ Care Network</h3>
+                        <div class="setting-row clickable" onclick="showModal('modal-link-guardian')">
+                            <div class="setting-info"><h4>Add/Remove Guardian</h4><p>Manage linked providers</p></div>
+                            <span>+</span>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info"><h4>Allow Guardian Editing</h4><p>Guardians can modify your regimen</p></div>
+                            <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="setting-row clickable" onclick="spawnToast('Emergency contacts updated', '✅')">
+                            <div class="setting-info"><h4>Emergency Contact Settings</h4><p>Primary person to contact</p></div>
+                            <span>›</span>
+                        </div>
+                    </div>
+
+                    <!-- 🎨 Appearance -->
+                    <div class="card settings-section">
+                        <h3>🎨 Appearance</h3>
+                        <div class="setting-row">
+                            <div class="setting-info"><h4>Dark Mode 🌙</h4><p>Always active for MediReminder Premium</p></div>
+                            <label class="toggle"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="logout-footer">
+                    <button class="btn btn-outline" style="width: 100%; border-color: var(--red); color: var(--red);" onclick="logout()">LOGOUT FROM DEVICE</button>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.7rem; margin-top: 1rem;">Version 2.4.0 (Enterprise Protected)</p>
                 </div>
             </section>
             
@@ -510,9 +560,9 @@
         });
 
         const PROFILES = {
-            doctor: { name: 'DR.mahesh kaluti', theme: 'doctor', tabs: [{ id: 'view-doctor', label: 'Monitor' }, { id: 'view-settings', label: 'Preferences' }] },
-            patient: { name: 'Priya Mehta', theme: 'patient', tabs: [{ id: 'view-patient', label: 'Regimen' }, { id: 'view-settings', label: 'Preferences' }] },
-            guardian: { name: 'Sarah (Guardian)', theme: 'guardian', tabs: [{ id: 'view-guardian', label: 'Portal' }, { id: 'view-settings', label: 'Preferences' }] }
+            doctor: { name: 'DR.mahesh kaluti', theme: 'doctor', tabs: [{ id: 'view-doctor', label: 'Monitor' }, { id: 'view-settings', label: 'Settings' }] },
+            patient: { name: 'Priya Mehta', theme: 'patient', tabs: [{ id: 'view-patient', label: 'Regimen' }, { id: 'view-settings', label: 'Settings' }] },
+            guardian: { name: 'Sarah (Guardian)', theme: 'guardian', tabs: [{ id: 'view-guardian', label: 'Portal' }, { id: 'view-settings', label: 'Settings' }] }
         };
 
         // ════════════════ UTILS ════════════════
@@ -916,6 +966,31 @@
         
         // Run on load
         window.addEventListener('load', checkPersistentSession);
+
+        // 🚨 SOS EMERGENCY LOGIC
+        function triggerSOS() {
+            if(!CURRENT_USER) return;
+            const sosData = {
+                patient: CURRENT_USER,
+                time: new Date().toLocaleTimeString(),
+                id: Date.now()
+            };
+            db.ref('emergencyAlerts').set(sosData);
+            spawnToast('SOS ALERT SENT!', '🚨');
+        }
+
+        // Global SOS Listener
+        db.ref('emergencyAlerts').on('value', (snapshot) => {
+            const alert = snapshot.val();
+            if(alert && alert.id > (Date.now() - 60000)) { // Only show if alert is fresh (< 1 min)
+                // If I am NOT the patient who sent it, show a massive alert
+                if(CURRENT_USER !== alert.patient) {
+                    playChime(); // Use the relentless chime!
+                    alert(`🚨 EMERGENCY SOS: ${alert.patient} needs immediate help! (Triggered at ${alert.time})`);
+                    db.ref('emergencyAlerts').set(null); // Clear after viewing
+                }
+            }
+        });
 
         // ════════════════ ALARM / CRON SYSTEM ════════════════
         let triggeredAlarms = {};
