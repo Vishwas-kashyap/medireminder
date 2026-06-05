@@ -318,7 +318,24 @@
     <div class="toast-container" id="toast-container"></div>
 
 
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
     <script>
+        // ════════════════ FIREBASE CONFIG ════════════════
+        const firebaseConfig = {
+          apiKey: "AIzaSyCJtSDFiYNolEgb8wFqXmMLCc4extr-Jko",
+          authDomain: "medireminder-db.firebaseapp.com",
+          projectId: "medireminder-db",
+          storageBucket: "medireminder-db.firebasestorage.app",
+          messagingSenderId: "343693907289",
+          appId: "1:343693907289:web:db91e00ddc78ef07a2e848",
+          measurementId: "G-P84RYV9EEW"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         // ════════════════ STATE MANAGERS ════════════════
         let STREAK_COUNT = 16;
         let CURRENT_USER = 'Priya Mehta';
@@ -343,7 +360,31 @@
                 { name: 'Vikram Das', rel: 'Patient', compliance: 100 }
             ]
         };
-        let STATE = JSON.parse(localStorage.getItem('mediTrackerState')) || DEFAULT_STATE;
+        
+        let STATE = DEFAULT_STATE;
+
+        // Live Realtime Database Sync Listener
+        db.ref('mediTrackerState').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                STATE = data;
+                // Ensure arrays don't become undefined if emptied
+                if(!STATE.medications) STATE.medications = [];
+                if(!STATE.alarms) STATE.alarms = [];
+                if(!STATE.linked) STATE.linked = [];
+            } else {
+                // If cloud database is empty, seed it
+                STATE = DEFAULT_STATE;
+                db.ref('mediTrackerState').set(STATE);
+            }
+            
+            // Re-render UI automatically when other devices make changes
+            if(!g('app-view').classList.contains('hidden')) {
+                updateDoctorView();
+                updatePatientView();
+                updateGuardianView();
+            }
+        });
 
         const PROFILES = {
             doctor: { name: 'DR.mahesh kaluti', theme: 'doctor', tabs: [{ id: 'view-doctor', label: 'Monitor' }, { id: 'view-settings', label: 'Preferences' }] },
@@ -478,7 +519,9 @@
         }
 
         function processRenderCycle() {
-            localStorage.setItem('mediTrackerState', JSON.stringify(STATE));
+            // Push changes instantly to Firebase Cloud Database
+            db.ref('mediTrackerState').set(STATE);
+            
             updateDoctorView();
             updatePatientView();
             updateGuardianView();
