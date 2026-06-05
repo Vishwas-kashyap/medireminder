@@ -2,10 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MediReminder | Intelligent Health Tracking</title>
     <!-- Linking our external, stunning stylesheet -->
     <link rel="stylesheet" href="./style.css">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
 
@@ -336,31 +341,76 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // ════════════════ SERVICE WORKER (Background Alarms) ════════════════
+        // ════════════════ SERVICE WORKER (Android Background Alarms) ════════════════
+        let _swReg = null;
+        let _keepAliveInterval = null;
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('MediReminder SW ready:', reg.scope))
+                .then(async reg => {
+                    _swReg = reg;
+                    console.log('MediReminder SW ready:', reg.scope);
+
+                    // ── Periodic Background Sync (Android Chrome 80+) ──
+                    // This wakes the SW every ~1 min even when app is killed
+                    if ('periodicSync' in reg) {
+                        try {
+                            const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+                            if (status.state === 'granted') {
+                                await reg.periodicSync.register('med-alarm-check', { minInterval: 60_000 });
+                                console.log('[SW] Periodic sync registered ✅');
+                            }
+                        } catch(e) { console.log('[SW] periodicSync not available:', e); }
+                    }
+                })
                 .catch(err => console.log('SW registration failed:', err));
         }
+
+        // ── Keep-alive ping: every 30s send a message to the SW ──
+        // This prevents Android Chrome from killing the SW in background
+        function startSWKeepalive() {
+            if (_keepAliveInterval) clearInterval(_keepAliveInterval);
+            _keepAliveInterval = setInterval(() => {
+                if (!('serviceWorker' in navigator)) return;
+                navigator.serviceWorker.ready.then(reg => {
+                    if (reg.active) reg.active.postMessage({ type: 'KEEPALIVE_PING' });
+                });
+            }, 30_000);
+        }
+
+        // ── PWA Installation Listener ──
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Optionally show a "Install App" button in your UI
+            console.log('PWA installation proposal captured.');
+            spawnToast('Add to Home Screen for better background alarms! 📱', '💡');
+        });
 
         // Send pending patient alarms to SW so it can fire independently in background
         function registerAlarmsWithSW(patientName) {
             if (!patientName || !('serviceWorker' in navigator)) return;
             const pendingMeds = STATE.medications.filter(m => m.pat === patientName && m.status === 'PENDING');
-            const alarmPayload = pendingMeds.map(m => ({ id: m.id, medName: m.name, time: m.time }));
+            const alarmPayload = pendingMeds.map(m => ({ id: m.id, medName: m.name, time: m.time, fired: false }));
 
             navigator.serviceWorker.ready.then(reg => {
-                const target = reg.active;
-                if (target) target.postMessage({ type: 'REGISTER_ALARMS', alarms: alarmPayload });
+                if (reg.active) reg.active.postMessage({ type: 'REGISTER_ALARMS', alarms: alarmPayload });
             });
         }
 
-        // Re-register alarms whenever page goes to background
+        // Re-register alarms whenever page hides (user locks phone / switches app)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && CURRENT_USER) {
                 registerAlarmsWithSW(CURRENT_USER);
+            } else if (!document.hidden && CURRENT_USER) {
+                // App came back to foreground — re-sync so missed alarms display
+                registerAlarmsWithSW(CURRENT_USER);
             }
         });
+
+        // Keep-alive even when page is visible (helps on Android Chrome)
+        startSWKeepalive();
 
         // ════════════════ STATE MANAGERS ════════════════
         let STREAK_COUNT = 16;
@@ -648,9 +698,13 @@
         function login(role, userName = null) {
             triggeredAlarms = {}; // Reset so new device catches missed alarms
 
-            // Request notification permission silently on login
+            // Request notification permission — MUST happen in user gesture context
             if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
+                Notification.requestPermission().then(perm => {
+                    console.log('[Notif] Permission:', perm);
+                    if (perm === 'granted') spawnToast('Background alarms enabled! ✅', '🔔');
+                    else spawnToast('Enable notifications for background alarms.', '⚠️');
+                });
             }
 
             if(role === 'patient' && userName) {
@@ -674,9 +728,9 @@
             setupNavigation(role);
             processRenderCycle();
 
-            // Register alarms with SW immediately after login
+            // Register alarms with SW immediately after login (with short delay for DB load)
             if (role === 'patient') {
-                setTimeout(() => registerAlarmsWithSW(CURRENT_USER), 1000);
+                setTimeout(() => registerAlarmsWithSW(CURRENT_USER), 1500);
             }
         }
 
