@@ -84,9 +84,13 @@
                 
                 <div class="grid-cols-2">
                     <div class="card fade-up">
-                        <div class="card-header">
+                        <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
                             <h2>Patient Network Timetable</h2>
-                            <button class="btn btn-primary" onclick="showModal('modal-prescribe')">+ New Prescription</button>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <button class="btn btn-primary" onclick="showModal('modal-add-patient')">+ Register Patient</button>
+                                <button class="btn btn-outline" style="border-color: var(--purple); color: var(--purple);" onclick="showModal('modal-link-guardian')">Assign Guardian</button>
+                                <button class="btn btn-primary" style="background:var(--blue);box-shadow: 0 4px 15px var(--blue-glow);" onclick="showModal('modal-prescribe')">+ Prescription</button>
+                            </div>
                         </div>
                         <div id="doc-medlist"></div>
                     </div>
@@ -220,17 +224,48 @@
     <!-- Patient Login Selection Modal -->
     <div class="modal-backdrop" id="modal-patient-login" onclick="closeModalBg(event, this)">
         <div class="modal-content">
-            <h2 style="color: var(--blue);">👤 Select Patient Profile</h2>
-            <p style="color: var(--text-muted); margin-bottom:1.5rem;">Who is logging in?</p>
-            <div id="patient-login-list" style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
-                <!-- Dynamically populated -->
+            <h2 style="color: var(--blue);">👤 Patient Entrance</h2>
+            <p style="color: var(--text-muted); margin-bottom:1.5rem;">Enter your exact name as registered by your physician.</p>
+            <div class="form-group">
+                <input type="text" id="login-patient-input" class="form-control" placeholder="Your Registered Name" required>
             </div>
-            <div style="display:flex; gap:0.5rem; margin-bottom: 1rem;">
-                <input type="text" id="new-patient-name" class="form-control" placeholder="New Patient Name">
-                <button class="btn btn-secondary" onclick="loginNewPatient()">Register & Login</button>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="loginPatientInput()">Secure Login</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-patient-login')">Cancel</button>
             </div>
-            <div class="modal-actions" style="margin-top:0;">
-                <button class="btn btn-outline" style="width:100%;" onclick="closeModal('modal-patient-login')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Doctor Add Patient Modal -->
+    <div class="modal-backdrop" id="modal-add-patient" onclick="closeModalBg(event, this)">
+        <div class="modal-content">
+            <h2 style="color: var(--green);">👤 Register New Patient</h2>
+            <div class="form-group">
+                <label>Patient Full Name</label>
+                <input type="text" class="form-control" id="form-ap-name" placeholder="E.g. John Doe" required>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="submitNewPatient()">Register Entry</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-add-patient')">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Doctor Assign Guardian Modal -->
+    <div class="modal-backdrop" id="modal-link-guardian" onclick="closeModalBg(event, this)">
+        <div class="modal-content">
+            <h2 style="color: var(--purple);">🛡️ Link a Guardian</h2>
+            <div class="form-group">
+                <label>Target Patient</label>
+                <input type="text" class="form-control" id="form-lg-pat" list="patient-options" placeholder="Select Target Patient" required>
+            </div>
+            <div class="form-group">
+                <label>Guardian Name</label>
+                <input type="text" class="form-control" id="form-lg-name" placeholder="E.g. Sarah Smith" required>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-purple" onclick="submitLinkGuardian()">Authorize Link</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-link-guardian')">Dismiss</button>
             </div>
         </div>
     </div>
@@ -435,14 +470,7 @@
         }
 
         function updateDynamicDropdowns() {
-            // Update patient login list
-            const loginList = g('patient-login-list');
-            if(loginList) {
-                loginList.innerHTML = STATE.linked.map(p => `
-                    <button class="btn form-control" style="text-align:left; padding:1rem; cursor:pointer;" onclick="login('patient', '${p.name}')">${p.name}</button>
-                `).join('');
-            }
-            // Update doctor prescribe dropdown
+            // Update doctor prescribe dropdown options natively
             const prPatOptions = g('patient-options');
             if(prPatOptions) {
                 prPatOptions.innerHTML = STATE.linked.map(p => `<option value="${p.name}"></option>`).join('');
@@ -570,18 +598,39 @@
             processRenderCycle();
         }
 
-        function loginNewPatient() {
-            const name = g('new-patient-name').value.trim();
-            if(!name) return spawnToast('Please enter a valid name', '⚠️');
-            
+        function submitNewPatient() {
+            const name = g('form-ap-name').value.trim();
+            if(!name) return spawnToast('Name required', '⚠️');
             const exists = STATE.linked.find(p => p.name.toLowerCase() === name.toLowerCase());
-            if(!exists) {
-                STATE.linked.push({ name: name, rel: 'Self-Registered', compliance: 100 });
-                processRenderCycle();
-                spawnToast('New patient profile created.', '✨');
-            }
-            login('patient', name);
-            g('new-patient-name').value = '';
+            if(exists) return spawnToast('Patient already in system!', '⚠️');
+            STATE.linked.push({ name: name, rel: 'Patient', compliance: 100, guardian: 'None' });
+            g('form-ap-name').value = '';
+            closeModal('modal-add-patient');
+            processRenderCycle();
+            spawnToast('Patient registered.', '✅');
+        }
+
+        function submitLinkGuardian() {
+            const patName = g('form-lg-pat').value.trim();
+            const gName = g('form-lg-name').value.trim();
+            if(!patName || !gName) return spawnToast('All fields required', '⚠️');
+            let patient = STATE.linked.find(p => p.name.toLowerCase() === patName.toLowerCase());
+            if(!patient) return spawnToast('Patient not found!', '🚫');
+            patient.guardian = gName;
+            patient.rel = 'Linked to Guardian: ' + gName; 
+            g('form-lg-pat').value = ''; g('form-lg-name').value = '';
+            closeModal('modal-link-guardian');
+            processRenderCycle();
+            spawnToast('Guardian Link Authorized.', '✅');
+        }
+
+        function loginPatientInput() {
+            const name = g('login-patient-input').value.trim();
+            if(!name) return spawnToast('Please enter your name.', '⚠️');
+            const exists = STATE.linked.find(p => p.name.toLowerCase() === name.toLowerCase());
+            if(!exists) return spawnToast('Patient name not found. Ask your doctor.', '🚫');
+            login('patient', exists.name);
+            g('login-patient-input').value = '';
         }
 
         function logout() {
