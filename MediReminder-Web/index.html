@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediReminder | Intelligent Health Tracking</title>
+    <!-- Linking our external, stunning stylesheet -->
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+    <!-- ═══════════ LOGIN VIEW ═══════════ -->
+    <main id="login-view">
+        <div class="brand fade-up">
+            <span class="brand-icon">💊</span>
+            <h1>MediReminder</h1>
+            <p>Next-Generation Intelligent Medication Tracker</p>
+        </div>
+        
+        <div class="role-grid">
+            <div class="role-card doc fade-up stgr-1" onclick="login('doctor')">
+                <span class="role-icon">🩺</span>
+                <h3>Doctor Portal</h3>
+                <p>Monitor patient adherence in real-time, issue prescriptions & track vital schedules.</p>
+            </div>
+            
+            <div class="role-card pat fade-up stgr-2" onclick="showModal('modal-patient-login')">
+                <span class="role-icon">❤️</span>
+                <h3>Patient Dashboard</h3>
+                <p>Stay on track with visually delightful reminders, maintain your medication streak.</p>
+            </div>
+            
+            <div class="role-card grd fade-up stgr-3" onclick="login('guardian')">
+                <span class="new-badge">PREMIUM</span>
+                <span class="role-icon">🛡️</span>
+                <h3>Guardian Access</h3>
+                <p>Ensure loved ones never miss a dose with custom remote alarms & compliance tracking.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════ MAIN APP VIEW ═══════════ -->
+    <main id="app-view" class="hidden">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">💊 MediReminder</div>
+            <ul class="nav-tabs" id="nav-tabs">
+                <!-- Dynamically assigned nav items based on role -->
+            </ul>
+            <div class="nav-user">
+                <span class="role-badge" id="role-badge">DOCTOR</span>
+                <span class="user-name" id="nav-user-name">DR.mahesh kaluti</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+
+        <div class="main-wrapper">
+            
+            <!-- 🩺 DOCTOR VIEW -->
+            <section id="view-doctor" class="hidden">
+                <div class="page-header fade-up">
+                    <h1>Active Clinical Workspace</h1>
+                    <p>Overview of patient adherence and prescriptions</p>
+                </div>
+                
+                <div class="grid-cols-4">
+                    <div class="card stat-card fade-up stgr-1" style="--accent: var(--green); border-color: rgba(16, 185, 129, 0.3);">
+                        <span class="label">Total Patients</span>
+                        <span class="val" style="color: var(--accent);">24</span>
+                    </div>
+                    <div class="card stat-card fade-up stgr-2" style="--accent: var(--blue); border-color: rgba(59, 130, 246, 0.3);">
+                        <span class="label">Network Compliance</span>
+                        <span class="val" id="doc-comp" style="color: var(--accent);">—</span>
+                    </div>
+                    <div class="card stat-card fade-up stgr-3" style="--accent: var(--purple); border-color: rgba(168, 85, 247, 0.3);">
+                        <span class="label">Guardian Alarms</span>
+                        <span class="val" id="doc-alarms" style="color: var(--accent);">0</span>
+                    </div>
+                    <div class="card stat-card fade-up stgr-4" style="--accent: var(--amber); border-color: rgba(245, 158, 11, 0.3);">
+                        <span class="label">Pending Doses</span>
+                        <span class="val" id="doc-pending" style="color: var(--accent);">—</span>
+                    </div>
+                </div>
+                
+                <div class="grid-cols-2">
+                    <div class="card fade-up">
+                        <div class="card-header">
+                            <h2>Patient Network Timetable</h2>
+                            <button class="btn btn-primary" onclick="showModal('modal-prescribe')">+ New Prescription</button>
+                        </div>
+                        <div id="doc-medlist"></div>
+                    </div>
+                    
+                    <div class="card fade-up stgr-1">
+                        <div class="card-header">
+                            <h2>Active Guardian Alerts</h2>
+                        </div>
+                        <div id="doc-alarmlist"></div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ❤️ PATIENT VIEW -->
+            <section id="view-patient" class="hidden">
+                <div class="page-header text-center fade-up">
+                    <h1 id="pat-greet">Good Morning, Priya! 👋</h1>
+                    <p>Track today's required doses below</p>
+                </div>
+                
+                <div class="patient-streak fade-up stgr-1">
+                    <div class="streak-val" id="streak-val">🔥 16</div>
+                    <div class="streak-label">Days streak - Excellent compliance!</div>
+                </div>
+                
+                <div class="card fade-up stgr-2">
+                    <div class="card-header">
+                        <h2>Today's Regimen</h2>
+                    </div>
+                    <div id="pat-medlist"></div>
+                </div>
+            </section>
+            
+            <!-- 🛡️ GUARDIAN VIEW -->
+            <section id="view-guardian" class="hidden">
+                <div class="guardian-hero fade-up">
+                    <div class="guardian-hero-icon">🛡️</div>
+                    <div class="guardian-hero-content">
+                        <h1>Family Care Portal</h1>
+                        <p>Remotely manage your loved ones' medication regimen. Seamlessly monitor timelines, establish custom multi-channel alerts, and guarantee health adherence.</p>
+                        <div style="display:flex; gap:1rem;">
+                            <button class="btn btn-purple" onclick="showModal('modal-alarm')">+ Set New Safety Alarm</button>
+                            <button class="btn btn-outline" onclick="showModal('modal-link')">Link Another Patient</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid-cols-2">
+                    <div class="card fade-up stgr-1">
+                        <div class="card-header">
+                            <h2>Safety Alarms</h2>
+                        </div>
+                        <div id="grd-alarmlist"></div>
+                    </div>
+                    
+                    <div class="card fade-up stgr-2">
+                        <div class="card-header">
+                            <h2>Linked Network Profiles</h2>
+                        </div>
+                        <div id="grd-patients"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ⚙️ SETTINGS VIEW -->
+            <section id="view-settings" class="hidden">
+                <div class="page-header fade-up">
+                    <h1>Preferences & Integrity</h1>
+                    <p>Customize notifications and secure account parameters.</p>
+                </div>
+                
+                <div class="card fade-up stgr-1" style="max-width: 600px;">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h4>Real-Time Push Notifications</h4>
+                            <p>Immediate on-device alerts when a dose is due.</p>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h4>SMS Guardian Fail-Safe Protocols</h4>
+                            <p>Send text message alerts if a critical dose is missed.</p>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h4>Acoustic Chime Enablers</h4>
+                            <p>Play system audio whenever modal prompts engage.</p>
+                        </div>
+                        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                    </div>
+                </div>
+            </section>
+            
+        </div>
+    </main>
+
+    <!-- ═══════════ MODALS & OVERLAYS ═══════════ -->
+    <!-- Prescribe Modal -->
+    <div class="modal-backdrop" id="modal-prescribe" onclick="closeModalBg(event, this)">
+        <div class="modal-content">
+            <h2 style="color: var(--green);">+ Issue Prescription</h2>
+            <div class="form-group">
+                <label>Medication Identity</label>
+                <input type="text" class="form-control" id="form-pr-name" placeholder="E.g. Amoxicillin 500mg" required>
+            </div>
+            <div class="form-group">
+                <label>Target Patient</label>
+                <select class="form-control" id="form-pr-pat">
+                    <!-- Dynamically populated -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Schedule Target</label>
+                <input type="time" class="form-control" id="form-pr-time" required>
+            </div>
+            <div class="form-group">
+                <label>Dosing Instruction</label>
+                <input type="text" class="form-control" id="form-pr-dose" placeholder="E.g. 1 Tablet post-meal">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" style="--accent: var(--green);" onclick="submitPrescription()">Prescribe Medication</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-prescribe')">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Login Selection Modal -->
+    <div class="modal-backdrop" id="modal-patient-login" onclick="closeModalBg(event, this)">
+        <div class="modal-content">
+            <h2 style="color: var(--blue);">👤 Select Patient Profile</h2>
+            <p style="color: var(--text-muted); margin-bottom:1.5rem;">Who is logging in?</p>
+            <div id="patient-login-list" style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+                <!-- Dynamically populated -->
+            </div>
+            <div style="display:flex; gap:0.5rem; margin-bottom: 1rem;">
+                <input type="text" id="new-patient-name" class="form-control" placeholder="New Patient Name">
+                <button class="btn btn-secondary" onclick="loginNewPatient()">Register & Login</button>
+            </div>
+            <div class="modal-actions" style="margin-top:0;">
+                <button class="btn btn-outline" style="width:100%;" onclick="closeModal('modal-patient-login')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guardian Alarm Modal -->
+    <div class="modal-backdrop" id="modal-alarm" onclick="closeModalBg(event, this)">
+        <div class="modal-content">
+            <h2 style="color: var(--purple);">🛡️ Register Alarm</h2>
+            <div class="form-group">
+                <label>Target Patient Name</label>
+                <input type="text" class="form-control" id="form-al-pat" placeholder="E.g. Priya Mehta" required>
+            </div>
+            <div class="form-group">
+                <label>Medication Note</label>
+                <input type="text" class="form-control" id="form-al-med" placeholder="E.g. Daily vitamins">
+            </div>
+            <div class="form-group">
+                <label>Action Time</label>
+                <input type="time" class="form-control" id="form-al-time" required>
+            </div>
+            <div class="form-group">
+                <label>Trigger Modality</label>
+                <select class="form-control" id="form-al-type">
+                    <option>Acoustic + Push</option>
+                    <option>SMS Text Only</option>
+                    <option>Omni-Channel Alert</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-purple" onclick="submitAlarm()">Lock In Alarm</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-alarm')">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Take Med Modal -->
+    <div class="modal-backdrop" id="modal-take" onclick="closeModalBg(event, this)">
+        <div class="modal-content" style="text-align: center;">
+            <div style="font-size: 4.5rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite;">💊</div>
+            <h2>Confirm Consumption</h2>
+            <p id="take-med-label" style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 2rem;">...</p>
+            <div class="modal-actions" style="justify-content: center; gap: 1rem;">
+                <button class="btn btn-secondary" onclick="confirmTakeMed()">✅ Confirmed Consumed</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-take')">Not Yet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts Manager -->
+    <div class="toast-container" id="toast-container"></div>
+
+
+    <script>
+        // ════════════════ STATE MANAGERS ════════════════
+        let STREAK_COUNT = 16;
+        let CURRENT_USER = 'Priya Mehta';
+        let TARGET_MED_ID = null;
+
+        const DEFAULT_STATE = {
+            medications: [
+                { id: 1, name: 'Amoxicillin 500mg', pat: 'Priya Mehta', time: '08:00 AM', status: 'PENDING', ico: '💊', dose: '1 tablet after food' },
+                { id: 2, name: 'Metformin 850mg',  pat: 'Priya Mehta', time: '01:00 PM', status: 'PENDING', ico: '🧬', dose: '1 tablet after lunch' },
+                { id: 3, name: 'Lisinopril 10mg',  pat: 'Rahul Singh', time: '09:30 AM', status: 'PENDING', ico: '🫀', dose: '1 tablet morning' },
+                { id: 4, name: 'Atorvastatin 20mg',pat: 'Anita Roy',   time: '10:00 PM', status: 'PENDING', ico: '🧪', dose: '1 tablet at night' },
+                { id: 5, name: 'Vitamin D3 1000IU',pat: 'Vikram Das',   time: '08:00 AM', status: 'TAKEN',   ico: '☀️', dose: '1 capsule daily' },
+            ],
+            alarms: [
+                { id: 1, pat: 'Priya Mehta', med: 'Blood Pressure Pill', time: '08:00 AM', type: 'Omni-Channel Alert' },
+                { id: 2, pat: 'Anita Roy',  med: 'Insulin Injection',  time: '07:00 PM', type: 'SMS Text Only' },
+            ],
+            linked: [
+                { name: 'Priya Mehta', rel: 'Mother', compliance: 85 },
+                { name: 'Rahul Singh', rel: 'Patient', compliance: 90 },
+                { name: 'Anita Roy', rel: 'Patient', compliance: 75 },
+                { name: 'Vikram Das', rel: 'Patient', compliance: 100 }
+            ]
+        };
+        let STATE = JSON.parse(localStorage.getItem('mediTrackerState')) || DEFAULT_STATE;
+
+        const PROFILES = {
+            doctor: { name: 'DR.mahesh kaluti', theme: 'doctor', tabs: [{ id: 'view-doctor', label: 'Monitor' }, { id: 'view-settings', label: 'Preferences' }] },
+            patient: { name: 'Priya Mehta', theme: 'patient', tabs: [{ id: 'view-patient', label: 'Regimen' }, { id: 'view-settings', label: 'Preferences' }] },
+            guardian: { name: 'Sarah (Guardian)', theme: 'guardian', tabs: [{ id: 'view-guardian', label: 'Portal' }, { id: 'view-settings', label: 'Preferences' }] }
+        };
+
+        // ════════════════ UTILS ════════════════
+        const g = id => document.getElementById(id);
+        const formatTime = (t24) => {
+            if(!t24) return '';
+            let [h, m] = t24.split(':');
+            let _h = parseInt(h);
+            return `${_h % 12 || 12}:${m} ${_h >= 12 ? 'PM' : 'AM'}`;
+        };
+
+        function spawnToast(msg, icon = '✨') {
+            const container = g('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<span class="toast-icon">${icon}</span> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ════════════════ MODAL API ════════════════
+        function showModal(id) {
+            if(id === 'modal-patient-login' || id === 'modal-prescribe') {
+                updateDynamicDropdowns();
+            }
+            g(id).classList.add('active');
+        }
+        function closeModal(id) {
+            g(id).classList.remove('active');
+            if(typeof stopChime === 'function') stopChime();
+        }
+        function closeModalBg(e, element) {
+            if(e.target === element) {
+                element.classList.remove('active');
+                if(typeof stopChime === 'function') stopChime();
+            }
+        }
+
+        // ════════════════ RENDERING PIPELINE ════════════════
+        function updateDoctorView() {
+            const taken = STATE.medications.filter(m => m.status === 'TAKEN').length;
+            const pending = STATE.medications.filter(m => m.status === 'PENDING').length;
+            const compRaw = Math.round((taken / STATE.medications.length) * 100) || 0;
+            
+            g('doc-comp').textContent = `${compRaw}%`;
+            g('doc-pending').textContent = pending;
+            g('doc-alarms').textContent = STATE.alarms.length;
+
+            g('doc-medlist').innerHTML = STATE.medications.map(m => `
+                <div class="med-item">
+                    <div class="med-icon-box">${m.ico}</div>
+                    <div class="med-info">
+                        <h4>${m.name}</h4>
+                        <p>${m.pat} &bull; Target Time: ${m.time}</p>
+                    </div>
+                    <div class="status-pill ${m.status.toLowerCase()}">${m.status}</div>
+                </div>
+            `).join('');
+
+            g('doc-alarmlist').innerHTML = STATE.alarms.map(a => `
+                <div class="med-item" style="border-left: 3px solid var(--purple);">
+                    <div class="med-info">
+                        <h4 style="color: var(--text-main);">${a.time} - ${a.pat}</h4>
+                        <p style="color: var(--purple-glow);">${a.med} &bull; ${a.type}</p>
+                    </div>
+                </div>
+            `).join('') || '<p style="color: var(--text-muted); font-size: 0.9rem;">Clean alert pipeline.</p>';
+        }
+
+        function updatePatientView() {
+            const myMeds = STATE.medications.filter(m => m.pat === CURRENT_USER);
+            g('pat-greet').textContent = `Good Morning, ${CURRENT_USER.split(' ')[0]}! 👋`;
+            g('streak-val').textContent = `🔥 ${STREAK_COUNT}`;
+
+            g('pat-medlist').innerHTML = myMeds.map(m => {
+                const isTaken = m.status === 'TAKEN';
+                return `
+                    <div class="med-item" style="${isTaken ? 'opacity: 0.6; filter: grayscale(1);' : ''}">
+                        <div class="med-icon-box">${m.ico}</div>
+                        <div class="med-info">
+                            <h4>${m.name}</h4>
+                            <p>${m.time} &bull; ${m.dose}</p>
+                        </div>
+                        <div>
+                            ${isTaken ? 
+                                '<button class="btn btn-outline" disabled>✅ TAKEN</button>' : 
+                                `<button class="btn btn-secondary" onclick="openTakeMed(${m.id}, '${m.name}')">Ingest</button>`}
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<p>No regimen assigned today.</p>';
+        }
+
+        function updateGuardianView() {
+            g('grd-alarmlist').innerHTML = STATE.alarms.map(a => `
+                <div class="med-item">
+                    <div class="med-icon-box" style="font-size: 1.5rem;">⏱️</div>
+                    <div class="med-info">
+                        <h4>${a.time} &bull; ${a.pat}</h4>
+                        <p>${a.med} | Alert: ${a.type}</p>
+                    </div>
+                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="removeAlarm(${a.id})">Drop</button>
+                </div>
+            `).join('') || '<p>No alarms constructed.</p>';
+
+            g('grd-patients').innerHTML = STATE.linked.map(p => `
+                <div class="med-item">
+                    <div class="med-icon-box" style="border-radius: 50%; font-size: 1.5rem; background: linear-gradient(135deg, var(--purple), var(--blue)); border:none;">👤</div>
+                    <div class="med-info">
+                        <h4>${p.name}</h4>
+                        <p>Relation: ${p.rel} &bull; Health Compliance: <span style="color: var(--green); font-weight:700;">${p.compliance}%</span></p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateDynamicDropdowns() {
+            // Update patient login list
+            const loginList = g('patient-login-list');
+            if(loginList) {
+                loginList.innerHTML = STATE.linked.map(p => `
+                    <button class="btn form-control" style="text-align:left; padding:1rem; cursor:pointer;" onclick="login('patient', '${p.name}')">${p.name}</button>
+                `).join('');
+            }
+            // Update doctor prescribe dropdown
+            const prPat = g('form-pr-pat');
+            if(prPat) {
+                prPat.innerHTML = STATE.linked.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            }
+        }
+
+        function processRenderCycle() {
+            localStorage.setItem('mediTrackerState', JSON.stringify(STATE));
+            updateDoctorView();
+            updatePatientView();
+            updateGuardianView();
+        }
+
+        // ════════════════ ACTIONS ════════════════
+        function submitPrescription() {
+            const name = g('form-pr-name').value;
+            const timeRaw = g('form-pr-time').value;
+            if(!name || !timeRaw) return spawnToast('Parameters missing!', '⚠️');
+            
+            STATE.medications.unshift({
+                id: Date.now(), name, pat: g('form-pr-pat').value,
+                time: formatTime(timeRaw), status: 'PENDING', ico: '💊', dose: g('form-pr-dose').value || 'As directed'
+            });
+            g('form-pr-name').value = ''; g('form-pr-time').value = '';
+            closeModal('modal-prescribe');
+            processRenderCycle();
+            spawnToast('Prescription encoded into network.', '📝');
+        }
+
+        function submitAlarm() {
+            const pat = g('form-al-pat').value;
+            const timeRaw = g('form-al-time').value;
+            if(!pat || !timeRaw) return spawnToast('Name and Time required.', '⚠️');
+
+            STATE.alarms.push({
+                id: Date.now(), pat, time: formatTime(timeRaw),
+                med: g('form-al-med').value || 'General Alarm', type: g('form-al-type').value
+            });
+            g('form-al-pat').value = ''; g('form-al-time').value = '';
+            closeModal('modal-alarm');
+            processRenderCycle();
+            spawnToast('Guardian Alarm Armed.', '🛡️');
+        }
+
+        function removeAlarm(id) {
+            STATE.alarms = STATE.alarms.filter(a => a.id !== id);
+            processRenderCycle();
+            spawnToast('Alarm dropped.', '🗑️');
+        }
+
+        function openTakeMed(id, name) {
+            TARGET_MED_ID = id;
+            g('take-med-label').textContent = name;
+            showModal('modal-take');
+        }
+
+        function confirmTakeMed() {
+            if(!TARGET_MED_ID) return;
+            const med = STATE.medications.find(m => m.id === TARGET_MED_ID);
+            if(med) { med.status = 'TAKEN'; STREAK_COUNT++; }
+            TARGET_MED_ID = null;
+            closeModal('modal-take');
+            processRenderCycle();
+            spawnToast('Regimen adherence logged!', '✅');
+        }
+
+        // ════════════════ NAVIGATION & AUTH ════════════════
+        function setupNavigation(role) {
+            const profile = PROFILES[role];
+            const tabsContainer = g('nav-tabs');
+            tabsContainer.innerHTML = profile.tabs.map((tab, idx) => `
+                <li>
+                    <button class="${idx === 0 ? 'active' : ''}" style="--accent: var(--${profile.theme})" onclick="switchView('${tab.id}', this)">
+                        ${tab.label}
+                    </button>
+                </li>
+            `).join('');
+
+            // Hide all views, display the first one
+            document.querySelectorAll('.main-wrapper > section').forEach(sec => sec.classList.add('hidden'));
+            g(profile.tabs[0].id).classList.remove('hidden');
+        }
+
+        function switchView(viewId, btnNode) {
+            document.querySelectorAll('.main-wrapper > section').forEach(sec => sec.classList.add('hidden'));
+            g(viewId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+            btnNode.classList.add('active');
+        }
+
+        function login(role, userName = null) {
+            if(role === 'patient' && userName) {
+                CURRENT_USER = userName;
+                PROFILES.patient.name = userName;
+                closeModal('modal-patient-login');
+            } else if (role === 'patient' && !userName) {
+                CURRENT_USER = 'Priya Mehta';
+                PROFILES.patient.name = CURRENT_USER;
+            }
+
+            g('login-view').classList.add('hidden');
+            g('app-view').classList.remove('hidden');
+            
+            const p = PROFILES[role];
+            g('nav-user-name').textContent = p.name;
+            const rb = g('role-badge');
+            rb.className = `role-badge ${role}`;
+            rb.textContent = role.toUpperCase();
+
+            setupNavigation(role);
+            processRenderCycle();
+        }
+
+        function loginNewPatient() {
+            const name = g('new-patient-name').value.trim();
+            if(!name) return spawnToast('Please enter a valid name', '⚠️');
+            
+            const exists = STATE.linked.find(p => p.name.toLowerCase() === name.toLowerCase());
+            if(!exists) {
+                STATE.linked.push({ name: name, rel: 'Self-Registered', compliance: 100 });
+                processRenderCycle();
+                spawnToast('New patient profile created.', '✨');
+            }
+            login('patient', name);
+            g('new-patient-name').value = '';
+        }
+
+        function logout() {
+            g('app-view').classList.add('hidden');
+            g('login-view').classList.remove('hidden');
+            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+        }
+
+        // ════════════════ ALARM / CRON SYSTEM ════════════════
+        let triggeredAlarms = {};
+        let activeAudio = null;
+        let alarmTimeout = null;
+
+        function stopChime() {
+            if (activeAudio) {
+                activeAudio.pause();
+                activeAudio = null;
+            }
+            if (alarmTimeout) {
+                clearTimeout(alarmTimeout);
+                alarmTimeout = null;
+            }
+        }
+
+        function playChime() {
+            stopChime(); // ensure no overlapping alarms
+            activeAudio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+            activeAudio.loop = true;
+            activeAudio.play().catch(e => console.log('Audio blocked, click page once to enable playback: ', e));
+
+            // Automatically shut off after 60,000 milliseconds (1 minute)
+            alarmTimeout = setTimeout(() => {
+                stopChime();
+            }, 60000);
+        }
+
+        setInterval(() => {
+            const d = new Date();
+            const h = d.getHours();
+            const m = d.getMinutes().toString().padStart(2, '0');
+            const currentTimeStr = `${h % 12 || 12}:${m} ${h >= 12 ? 'PM' : 'AM'}`;
+
+            if(CURRENT_USER && !g('view-patient').classList.contains('hidden')) {
+                const pendingMeds = STATE.medications.filter(med => 
+                    med.pat === CURRENT_USER && med.status === 'PENDING' && med.time === currentTimeStr
+                );
+                
+                pendingMeds.forEach(med => {
+                    const key = 'med_' + med.id;
+                    if(!triggeredAlarms[key]) {
+                        triggeredAlarms[key] = true;
+                        playChime();
+                        spawnToast(`🔔 Time for ${med.name}!`, '⏰');
+                        openTakeMed(med.id, med.name);
+                    }
+                });
+            }
+        }, 5000);
+
+        // Initialize display if desired to trigger fade-up animations.
+    </script>
+</body>
+</html>
