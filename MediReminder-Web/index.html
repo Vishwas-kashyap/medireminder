@@ -317,6 +317,23 @@
     <!-- Toasts Manager -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- Sound Unlock Overlay (for mobile browsers) -->
+    <div id="sound-unlock-overlay" style="
+        display: none;
+        position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+        z-index: 99999; align-items: center; justify-content: center; flex-direction: column;
+        gap: 1.5rem; text-align: center; padding: 2rem;
+    ">
+        <div style="font-size: 4rem;">🔔</div>
+        <h2 style="font-family: Outfit, sans-serif; color: #fff; font-size: 1.75rem;">Medication Alarm!</h2>
+        <p style="color: #94a3b8; font-size: 1.05rem;" id="sound-unlock-label">You have a pending dose. Tap below to hear the alarm.</p>
+        <button onclick="unlockAndPlay()" style="
+            background: #10b981; color: #000; border: none; padding: 1rem 2.5rem;
+            border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(16,185,129,0.5);
+        ">🔊 Tap to Enable Alarm Sound</button>
+    </div>
+
 
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -383,6 +400,7 @@
                 updateDoctorView();
                 updatePatientView();
                 updateGuardianView();
+                checkOverdueAlarms(); // Check for missed/due alarms on any device update
             }
         });
 
@@ -619,6 +637,7 @@
         }
 
         function login(role, userName = null) {
+            triggeredAlarms = {}; // Reset so new device catches missed alarms
             if(role === 'patient' && userName) {
                 CURRENT_USER = userName;
                 PROFILES.patient.name = userName;
@@ -686,6 +705,69 @@
         let triggeredAlarms = {};
         let activeAudio = null;
         let alarmTimeout = null;
+        let pendingAlarmMedId = null;
+
+        function unlockAndPlay() {
+            g('sound-unlock-overlay').style.display = 'none';
+            playChime();
+            if(pendingAlarmMedId) {
+                const med = STATE.medications.find(m => m.id === pendingAlarmMedId);
+                if(med) openTakeMed(med.id, med.name);
+            }
+        }
+
+        function triggerAlarm(med) {
+            const key = 'med_' + med.id;
+            if(triggeredAlarms[key]) return;
+            triggeredAlarms[key] = true;
+
+            spawnToast(`🔔 Time for ${med.name}!`, '⏰');
+
+            // Try to play audio directly (works if user already interacted)
+            const testPlay = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+            testPlay.play().then(() => {
+                testPlay.pause();
+                // Audio allowed — play real chime and open modal
+                playChime();
+                openTakeMed(med.id, med.name);
+            }).catch(() => {
+                // Audio blocked (mobile) — show unlock overlay
+                pendingAlarmMedId = med.id;
+                g('sound-unlock-label').textContent = `Time to take: ${med.name}. Tap to hear the alarm.`;
+                g('sound-unlock-overlay').style.display = 'flex';
+            });
+        }
+
+        function checkOverdueAlarms() {
+            if(!CURRENT_USER || g('view-patient').classList.contains('hidden')) return;
+
+            const d = new Date();
+            const nowMins = d.getHours() * 60 + d.getMinutes();
+
+            const myPendingMeds = STATE.medications.filter(m => m.pat === CURRENT_USER && m.status === 'PENDING');
+
+            myPendingMeds.forEach(med => {
+                const key = 'med_' + med.id;
+                if(triggeredAlarms[key]) return;
+
+                // Parse "08:00 AM" style time
+                const match = med.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                if(!match) return;
+                let mh = parseInt(match[1]);
+                const mm = parseInt(match[2]);
+                const period = match[3].toUpperCase();
+                if(period === 'PM' && mh !== 12) mh += 12;
+                if(period === 'AM' && mh === 12) mh = 0;
+
+                const medMins = mh * 60 + mm;
+                const diff = nowMins - medMins;
+
+                // Fire if the alarm is due now OR was missed in the last 60 minutes
+                if(diff >= 0 && diff <= 60) {
+                    triggerAlarm(med);
+                }
+            });
+        }
 
         function stopChime() {
             if (activeAudio) {
@@ -699,17 +781,14 @@
         }
 
         function playChime() {
-            stopChime(); // ensure no overlapping alarms
+            stopChime();
             activeAudio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
             activeAudio.loop = true;
-            activeAudio.play().catch(e => console.log('Audio blocked, click page once to enable playback: ', e));
-
-            // Automatically shut off after 60,000 milliseconds (1 minute)
-            alarmTimeout = setTimeout(() => {
-                stopChime();
-            }, 60000);
+            activeAudio.play().catch(e => console.log('Audio blocked:', e));
+            alarmTimeout = setTimeout(() => stopChime(), 60000);
         }
 
+        // 5-second interval — checks for exact-time matches
         setInterval(() => {
             const d = new Date();
             const h = d.getHours();
@@ -720,16 +799,7 @@
                 const pendingMeds = STATE.medications.filter(med => 
                     med.pat === CURRENT_USER && med.status === 'PENDING' && med.time === currentTimeStr
                 );
-                
-                pendingMeds.forEach(med => {
-                    const key = 'med_' + med.id;
-                    if(!triggeredAlarms[key]) {
-                        triggeredAlarms[key] = true;
-                        playChime();
-                        spawnToast(`🔔 Time for ${med.name}!`, '⏰');
-                        openTakeMed(med.id, med.name);
-                    }
-                });
+                pendingMeds.forEach(med => triggerAlarm(med));
             }
         }, 5000);
 
