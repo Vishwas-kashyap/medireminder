@@ -35,7 +35,7 @@
                 <p>Stay on track with visually delightful reminders, maintain your medication streak.</p>
             </div>
             
-            <div class="role-card grd fade-up stgr-3" onclick="login('guardian')">
+            <div class="role-card grd fade-up stgr-3" onclick="showModal('modal-guardian-login')">
                 <span class="new-badge">PREMIUM</span>
                 <span class="role-icon">🛡️</span>
                 <h3>Guardian Access</h3>
@@ -231,17 +231,50 @@
         </div>
     </div>
 
-    <!-- Patient Login Selection Modal -->
+    <!-- Patient Login Modal -->
     <div class="modal-backdrop" id="modal-patient-login" onclick="closeModalBg(event, this)">
         <div class="modal-content">
             <h2 style="color: var(--blue);">👤 Patient Entrance</h2>
-            <p style="color: var(--text-muted); margin-bottom:1.5rem;">Enter your exact name as registered by your physician.</p>
+            <p style="color: var(--text-muted); margin-bottom:1.5rem;">Enter your exact name and assigned password.</p>
             <div class="form-group">
-                <input type="text" id="login-patient-input" class="form-control" placeholder="Your Registered Name" required>
+                <label>Registered Name</label>
+                <input type="text" id="login-patient-input" class="form-control" placeholder="E.g. Priya Mehta" required>
+            </div>
+            <div class="form-group">
+                <label>Access Password</label>
+                <input type="password" id="login-patient-pass" class="form-control" placeholder="••••••••" required>
+            </div>
+            <div class="setting-row" style="border:none; padding:10px 0;">
+                <span style="font-size:0.9rem;">Remember Me</span>
+                <label class="toggle"><input type="checkbox" id="login-patient-rem"><span class="toggle-slider"></span></label>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="loginPatientInput()">Secure Login</button>
                 <button class="btn btn-outline" onclick="closeModal('modal-patient-login')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guardian Login Modal -->
+    <div class="modal-backdrop" id="modal-guardian-login" onclick="closeModalBg(event, this)">
+        <div class="modal-content">
+            <h2 style="color: var(--purple);">🛡️ Guardian Entrance</h2>
+            <p style="color: var(--text-muted); margin-bottom:1.5rem;">Enter your guardian identity and password.</p>
+            <div class="form-group">
+                <label>Guardian Name</label>
+                <input type="text" id="login-guardian-input" class="form-control" placeholder="E.g. Sarah Smith" required>
+            </div>
+            <div class="form-group">
+                <label>Access Password</label>
+                <input type="password" id="login-guardian-pass" class="form-control" placeholder="••••••••" required>
+            </div>
+            <div class="setting-row" style="border:none; padding:10px 0;">
+                <span style="font-size:0.9rem;">Remember Me</span>
+                <label class="toggle"><input type="checkbox" id="login-guardian-rem"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-purple" onclick="loginGuardianInput()">Authorize Access</button>
+                <button class="btn btn-outline" onclick="closeModal('modal-guardian-login')">Cancel</button>
             </div>
         </div>
     </div>
@@ -253,6 +286,10 @@
             <div class="form-group">
                 <label>Patient Full Name</label>
                 <input type="text" class="form-control" id="form-ap-name" placeholder="E.g. John Doe" required>
+            </div>
+            <div class="form-group">
+                <label>Assign Login Password</label>
+                <input type="text" class="form-control" id="form-ap-pass" placeholder="Create temporary password" required>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-primary" onclick="submitNewPatient()">Register Entry</button>
@@ -272,6 +309,10 @@
             <div class="form-group">
                 <label>Guardian Name</label>
                 <input type="text" class="form-control" id="form-lg-name" placeholder="E.g. Sarah Smith" required>
+            </div>
+            <div class="form-group">
+                <label>Assign Guardian Password</label>
+                <input type="text" class="form-control" id="form-lg-pass" placeholder="Create access password" required>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-purple" onclick="submitLinkGuardian()">Authorize Link</button>
@@ -500,6 +541,25 @@
         function showModal(id) {
             if(id === 'modal-patient-login' || id === 'modal-prescribe') {
                 updateDynamicDropdowns();
+            }
+            // Pre-fill Remembered credentials
+            if(id === 'modal-patient-login') {
+                const creds = localStorage.getItem('remember_patient');
+                if(creds) {
+                    const { name, pass } = JSON.parse(creds);
+                    g('login-patient-input').value = name;
+                    g('login-patient-pass').value = pass;
+                    g('login-patient-rem').checked = true;
+                }
+            }
+            if(id === 'modal-guardian-login') {
+                const creds = localStorage.getItem('remember_guardian');
+                if(creds) {
+                    const { name, pass } = JSON.parse(creds);
+                    g('login-guardian-input').value = name;
+                    g('login-guardian-pass').value = pass;
+                    g('login-guardian-rem').checked = true;
+                }
             }
             g(id).classList.add('active');
         }
@@ -763,11 +823,12 @@
 
         function submitNewPatient() {
             const name = g('form-ap-name').value.trim();
-            if(!name) return spawnToast('Name required', '⚠️');
+            const pass = g('form-ap-pass').value.trim();
+            if(!name || !pass) return spawnToast('All fields required', '⚠️');
             const exists = STATE.linked.find(p => p.name.toLowerCase() === name.toLowerCase());
             if(exists) return spawnToast('Patient already in system!', '⚠️');
-            STATE.linked.push({ name: name, rel: 'Patient', compliance: 100, guardian: 'None' });
-            g('form-ap-name').value = '';
+            STATE.linked.push({ name: name, pass: pass, rel: 'Patient', compliance: 100, guardian: 'None' });
+            g('form-ap-name').value = ''; g('form-ap-pass').value = '';
             closeModal('modal-add-patient');
             processRenderCycle();
             spawnToast('Patient registered.', '✅');
@@ -776,12 +837,14 @@
         function submitLinkGuardian() {
             const patName = g('form-lg-pat').value.trim();
             const gName = g('form-lg-name').value.trim();
-            if(!patName || !gName) return spawnToast('All fields required', '⚠️');
+            const gPass = g('form-lg-pass').value.trim();
+            if(!patName || !gName || !gPass) return spawnToast('All fields required', '⚠️');
             let patient = STATE.linked.find(p => p.name.toLowerCase() === patName.toLowerCase());
             if(!patient) return spawnToast('Patient not found!', '🚫');
             patient.guardian = gName;
+            patient.guardianPass = gPass;
             patient.rel = 'Linked to Guardian: ' + gName; 
-            g('form-lg-pat').value = ''; g('form-lg-name').value = '';
+            g('form-lg-pat').value = ''; g('form-lg-name').value = ''; g('form-lg-pass').value = '';
             closeModal('modal-link-guardian');
             processRenderCycle();
             spawnToast('Guardian Link Authorized.', '✅');
@@ -789,11 +852,44 @@
 
         function loginPatientInput() {
             const name = g('login-patient-input').value.trim();
-            if(!name) return spawnToast('Please enter your name.', '⚠️');
+            const pass = g('login-patient-pass').value.trim();
+            const remember = g('login-patient-rem').checked;
+
+            if(!name || !pass) return spawnToast('Name and Password required.', '⚠️');
             const exists = STATE.linked.find(p => p.name.toLowerCase() === name.toLowerCase());
-            if(!exists) return spawnToast('Patient name not found. Ask your doctor.', '🚫');
+            if(!exists || exists.pass !== pass) return spawnToast('Invalid credentials.', '🚫');
+
+            // Handle Remember Me
+            if(remember) localStorage.setItem('remember_patient', JSON.stringify({ name, pass }));
+            else localStorage.removeItem('remember_patient');
+
             login('patient', exists.name);
-            g('login-patient-input').value = '';
+            g('login-patient-input').value = ''; g('login-patient-pass').value = '';
+        }
+
+        function loginGuardianInput() {
+            const name = g('login-guardian-input').value.trim();
+            const pass = g('login-guardian-pass').value.trim();
+            const remember = g('login-guardian-rem').checked;
+
+            if(!name || !pass) return spawnToast('Identity and Password required.', '⚠️');
+            
+            // Check if this guardian exists for any patient
+            let valid = false;
+            STATE.linked.forEach(p => {
+                if(p.guardian && p.guardian.toLowerCase() === name.toLowerCase() && p.guardianPass === pass) {
+                    valid = true;
+                }
+            });
+
+            if(!valid) return spawnToast('Invalid credentials.', '🚫');
+
+            // Handle Remember Me
+            if(remember) localStorage.setItem('remember_guardian', JSON.stringify({ name, pass }));
+            else localStorage.removeItem('remember_guardian');
+
+            login('guardian', name + ' (Guardian)');
+            g('login-guardian-input').value = ''; g('login-guardian-pass').value = '';
         }
 
         function logout() {
